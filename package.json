@@ -1,0 +1,14 @@
+{
+  "name": "bittorrent-client",
+  "version": "1.0.0",
+  "description": "A BitTorrent Client using Nodejs",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "DeepSeaCreature0",
+  "license": "ISC",
+  "dependencies": {
+    "bncode": "^0.5.3"
+  }
+}
