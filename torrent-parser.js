@@ -3,21 +3,24 @@
 const fs = require('fs');
 const bncode = require('bncode');
 const crypto = require('crypto');
-const bignum = require('bignum');
+const BigNumber = require('bignumber.js');
 
 module.exports.open = (filepath) => {
   return bncode.decode(fs.readFileSync(filepath));
 };
 
 module.exports.size = torrent => {
-    const size = torrent.info.files ?
-    torrent.info.files.map(file => file.length).reduce((a, b) => a + b) :
-    torrent.info.length;
+  const size = torrent.info.files ?
+    torrent.info.files.map(file => new BigNumber(file.length)).reduce((a, b) => a.plus(b)) :
+    new BigNumber(torrent.info.length);
 
-    return bignum.toBuffer(size, {size: 8});
+  // Convert size to an 8-byte buffer
+  const sizeBuffer = Buffer.alloc(8);
+  sizeBuffer.writeBigUInt64BE(BigInt(size.toFixed()));
+  return sizeBuffer;
 };
 
 module.exports.infoHash = torrent => {
-    const info = bencode.encode(torrent.info);
-    return crypto.createHash('sha1').update(info).digest();
+  const info = bncode.encode(torrent.info);
+  return crypto.createHash('sha1').update(info).digest();
 };

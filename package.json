@@ -9,6 +9,7 @@
   "author": "DeepSeaCreature0",
   "license": "ISC",
   "dependencies": {
+    "bignumber.js": "^9.1.2",
     "bncode": "^0.5.3"
   }
 }
