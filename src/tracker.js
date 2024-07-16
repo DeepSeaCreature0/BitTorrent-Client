@@ -5,7 +5,7 @@ const Buffer = require('buffer').Buffer; //buffer handling since data send in bu
 const { URL } = require('url') // hanling url like slicing host/port from url
 const crypto = require('crypto'); // encryption/decryption/hashing
 const torrentParser = require('./torrent-parser'); // torrent handling like open,torrent-size,hashing of info
-const util = require('./util');
+const util = require('./util'); // generating unique id for our client
 
 // get the list of all the peers from the torrent and fire the callback function
 const getPeers = (torrent, callback) => {
