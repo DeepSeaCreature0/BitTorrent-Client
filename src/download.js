@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('fs');
 const net = require('net'); // for tcp protocol
 const Buffer = require('buffer').Buffer; //buffer handling since data send in buffer format
 const tracker = require('./tracker'); // all function related to tracker like connect req/res ,announce req/res
@@ -24,7 +25,7 @@ function handlePeer(peer, torrent, pieces, file){
         socket.write(message.buildHandshake(torrent));
     });
     const queue = new Queue(torrent);
-    onWholeMsg(socket, msg => msgHandler(msg, socket,requested,queue));
+    onWholeMsg(socket, msg => msgHandler(msg, socket, pieces, queue, torrent, file));
 };
 
 function onWholeMsg(socket, callback) {
@@ -44,7 +45,7 @@ function onWholeMsg(socket, callback) {
     });
 };
 
-function msgHandler(msg, socket,requested,queue) {
+function msgHandler(msg, socket, pieces, queue, torrent, file) {
     if (isHandshake(msg)) {
       socket.write(message.buildInterested());
     } else {

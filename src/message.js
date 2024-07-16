@@ -121,7 +121,7 @@ const buildHave = (payload) => {
     piece. Spare bits at the end are set to zero.
 */
 const buildBitfield = (bitfield) => {
-  const buf = Buffer.alloc(14);
+  const buf = Buffer.alloc(bitfield.length + 1 + 4);
   // length
   buf.writeUInt32BE(payload.length + 1, 0);
   // id
