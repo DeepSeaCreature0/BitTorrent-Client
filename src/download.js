@@ -8,18 +8,20 @@ const message = require('./message'); // build message
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
 
 const main= torrent=>{
+    const requested = []; //a single list of all pieces that have already been requested that would get passed to each socket connection
     tracker.getPeers(torrent, peers => {
-        peers.forEach(peer=>handlePeer(peer,torrent));
+        peers.forEach(peer=>handlePeer(peer,torrent,requested));
     });
 }
 
-function handlePeer(peer,torrent){
+function handlePeer(peer,torrent,requested){
     const socket = net.Socket();
     socket.on('error',console.log);
     socket.connect(peer.port,peer.ip,()=>{
         socket.write(message.buildHandshake(torrent));
     });
-    onWholeMsg(socket, msg => msgHandler(msg, socket));
+    const queue = [];
+    onWholeMsg(socket, msg => msgHandler(msg, socket,requested,queue));
 };
 
 function onWholeMsg(socket, callback) {
@@ -39,7 +41,7 @@ function onWholeMsg(socket, callback) {
     });
 };
 
-function msgHandler(msg, socket) {
+function msgHandler(msg, socket,requested,queue) {
     if (isHandshake(msg)) {
       socket.write(message.buildInterested());
     } else {
@@ -47,9 +49,9 @@ function msgHandler(msg, socket) {
   
       if (m.id === 0) chokeHandler();
       if (m.id === 1) unchokeHandler();
-      if (m.id === 4) haveHandler(m.payload);
+      if (m.id === 4) haveHandler(m.payload,socket,requested,queue);
       if (m.id === 5) bitfieldHandler(m.payload);
-      if (m.id === 7) pieceHandler(m.payload);
+      if (m.id === 7) pieceHandler(m.payload, socket, requested, queue);
     }
   }
 
@@ -66,17 +68,40 @@ function unchokeHandler() {
 // ...
 }
 
-function haveHandler() {
-// ...
-}
+function haveHandler(payload, socket, requested,queue) {
+    //....
+    const pieceIndex = payload.readUInt32BE(0);
+    queue.push(pieceIndex);
+
+    if (queue.length === 1) {
+        requestPiece(socket, requested, queue);
+    }
+
+    if (!requested[pieceIndex]) {
+      socket.write(message.buildRequest(...));
+    }
+    requested[pieceIndex] = true;
+};
 
 function bitfieldHandler() {
 // ...
 }
 
-function pieceHandler() {
-// ...
-}
+function pieceHandler(payload, socket, requested, queue) {
+    // ...
+    queue.shift();
+    requestPiece(socket, requested, queue);
+};
+
+function requestPiece(socket, requested, queue) {
+    if (requested[queue[0]]) {
+      queue.shift();
+    } else {
+      // this is pseudo-code, as buildRequest actually takes slightly more
+      // complex arguments
+      socket.write(message.buildRequest(pieceIndex));
+    }
+};
 
 module.exports={
     main,
