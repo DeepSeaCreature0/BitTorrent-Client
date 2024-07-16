@@ -1,9 +1,9 @@
-'use strict';
+'use strict'; //enforces stricter parsing and error handling
 
-const tracker = require('./tracker');
-const torrentParser = require('./torrent-parser');
+const tracker = require('./tracker'); // all function related to tracker like connect req/res ,announce req/res
+const torrentParser = require('./torrent-parser'); // torrent handling
 
-const torrentFileName = process.argv[2]+".torrent";
+const torrentFileName = process.argv[2]+".torrent"; // torrent name as argument
 
 if (!torrentFileName) {
     console.error('Please provide a torrent file name as an argument.');
