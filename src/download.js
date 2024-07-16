@@ -4,23 +4,24 @@ const net = require('net'); // for tcp protocol
 const Buffer = require('buffer').Buffer; //buffer handling since data send in buffer format
 const tracker = require('./tracker'); // all function related to tracker like connect req/res ,announce req/res
 const message = require('./message'); // build message
+const Pieces = require('./peices');
 
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
 
 const main= torrent=>{
-    const requested = []; //a single list of all pieces that have already been requested that would get passed to each socket connection
     tracker.getPeers(torrent, peers => {
-        peers.forEach(peer=>handlePeer(peer,torrent,requested));
+        const pieces = new Pieces(torrent.info.pieces.length);
+        peers.forEach(peer=>handlePeer(peer,torrent,pieces));
     });
 }
 
-function handlePeer(peer,torrent,requested){
+function handlePeer(peer,torrent,pieces){
     const socket = net.Socket();
     socket.on('error',console.log);
     socket.connect(peer.port,peer.ip,()=>{
         socket.write(message.buildHandshake(torrent));
     });
-    const queue = [];
+    const queue = {choked: true, queue: []};
     onWholeMsg(socket, msg => msgHandler(msg, socket,requested,queue));
 };
 
@@ -47,11 +48,11 @@ function msgHandler(msg, socket,requested,queue) {
     } else {
       const m = message.parse(msg);
   
-      if (m.id === 0) chokeHandler();
-      if (m.id === 1) unchokeHandler();
-      if (m.id === 4) haveHandler(m.payload,socket,requested,queue);
+      if (m.id === 0) chokeHandler(socket);
+      if (m.id === 1) unchokeHandler(socket,pieces,queue);
+      if (m.id === 4) haveHandler(m.payload);
       if (m.id === 5) bitfieldHandler(m.payload);
-      if (m.id === 7) pieceHandler(m.payload, socket, requested, queue);
+      if (m.id === 7) pieceHandler(m.payload);
     }
   }
 
@@ -60,12 +61,13 @@ function isHandshake(msg) {
            msg.toString('utf8', 1, 20) === 'BitTorrent protocol';
 };  
 
-function chokeHandler() {
-// ...
+function chokeHandler(socket) {
+    socket.end();
 }
 
-function unchokeHandler() {
-// ...
+function unchokeHandler(socket, pieces, queue) {
+    queue.choked = false;
+    requestPiece(socket, pieces, queue);
 }
 
 function haveHandler(payload, socket, requested,queue) {
@@ -93,13 +95,16 @@ function pieceHandler(payload, socket, requested, queue) {
     requestPiece(socket, requested, queue);
 };
 
-function requestPiece(socket, requested, queue) {
-    if (requested[queue[0]]) {
-      queue.shift();
-    } else {
-      // this is pseudo-code, as buildRequest actually takes slightly more
-      // complex arguments
-      socket.write(message.buildRequest(pieceIndex));
+function requestPiece(socket, pieces, queue) {
+    if (queue.choked) return null;
+
+    while (queue.queue.length) {
+        const pieceIndex = queue.shift();
+        if (pieces.needed(pieceIndex)) {
+            socket.write(message.buildRequest(pieceIndex));
+            pieces.addRequested(pieceIndex);
+            break;
+        }
     }
 };
 
