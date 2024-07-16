@@ -12,4 +12,4 @@ if (!torrentFileName) {
 
 const torrent = torrentParser.open(torrentFileName);
 
-download.main(torrent);
+download.main(torrent, torrent.info.name);

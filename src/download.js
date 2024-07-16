@@ -9,14 +9,15 @@ const Queue = require('./queue');
 
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
 
-const main= torrent=>{
+const main= (torrent,path) =>{
     tracker.getPeers(torrent, peers => {
         const pieces = new Pieces(torrent);
-        peers.forEach(peer=>handlePeer(peer,torrent,pieces));
+        const file = fs.openSync(path, 'w');
+        peers.forEach(peer => handlePeer(peer, torrent, pieces, file));
     });
 }
 
-function handlePeer(peer,torrent,pieces){
+function handlePeer(peer, torrent, pieces, file){
     const socket = net.Socket();
     socket.on('error',console.log);
     socket.connect(peer.port,peer.ip,()=>{
@@ -53,7 +54,7 @@ function msgHandler(msg, socket,requested,queue) {
       if (m.id === 1) unchokeHandler(socket,pieces,queue);
       if (m.id === 4) haveHandler(socket, pieces, queue, m.payload);
       if (m.id === 5) bitfieldHandler(socket, pieces, queue, m.payload);
-      if (m.id === 7) pieceHandler(m.payload);
+      if (m.id === 7) pieceHandler(socket, pieces, queue, torrent, file, m.payload);
     }
   }
 
@@ -89,10 +90,21 @@ function bitfieldHandler(socket, pieces, queue, payload) {
     if (queueEmpty) requestPiece(socket, pieces, queue);
 }
 
-function pieceHandler(payload, socket, requested, queue) {
-    // ...
-    queue.shift();
-    requestPiece(socket, requested, queue);
+function pieceHandler(socket, pieces, queue, torrent, file, pieceResp) {
+    pieces.printPercentDone();
+  
+    pieces.addReceived(pieceResp);
+  
+    const offset = pieceResp.index * torrent.info['piece length'] + pieceResp.begin;
+    fs.write(file, pieceResp.block, 0, pieceResp.block.length, offset, () => {});
+  
+    if (pieces.isDone()) {
+      console.log('DONE!');
+      socket.end();
+      try { fs.closeSync(file); } catch(e) {}
+    } else {
+      requestPiece(socket,pieces, queue);
+    }
 };
 
 function requestPiece(socket, pieces, queue) {
