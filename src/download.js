@@ -5,12 +5,13 @@ const Buffer = require('buffer').Buffer; //buffer handling since data send in bu
 const tracker = require('./tracker'); // all function related to tracker like connect req/res ,announce req/res
 const message = require('./message'); // build message
 const Pieces = require('./peices');
+const Queue = require('./queue');
 
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
 
 const main= torrent=>{
     tracker.getPeers(torrent, peers => {
-        const pieces = new Pieces(torrent.info.pieces.length);
+        const pieces = new Pieces(torrent);
         peers.forEach(peer=>handlePeer(peer,torrent,pieces));
     });
 }
@@ -21,7 +22,7 @@ function handlePeer(peer,torrent,pieces){
     socket.connect(peer.port,peer.ip,()=>{
         socket.write(message.buildHandshake(torrent));
     });
-    const queue = {choked: true, queue: []};
+    const queue = new Queue(torrent);
     onWholeMsg(socket, msg => msgHandler(msg, socket,requested,queue));
 };
 
@@ -98,12 +99,12 @@ function pieceHandler(payload, socket, requested, queue) {
 function requestPiece(socket, pieces, queue) {
     if (queue.choked) return null;
 
-    while (queue.queue.length) {
-        const pieceIndex = queue.shift();
-        if (pieces.needed(pieceIndex)) {
-            socket.write(message.buildRequest(pieceIndex));
-            pieces.addRequested(pieceIndex);
-            break;
+    while (queue.length()) {
+        const pieceBlock = queue.deque();
+        if (pieces.needed(pieceBlock)) {
+          socket.write(message.buildRequest(pieceBlock));
+          pieces.addRequested(pieceBlock);
+          break;
         }
     }
 };
