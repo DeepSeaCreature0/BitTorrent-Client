@@ -5,7 +5,7 @@ const net = require('net'); // for tcp protocol
 const Buffer = require('buffer').Buffer; //buffer handling since data send in buffer format
 const tracker = require('./tracker'); // all function related to tracker like connect req/res ,announce req/res
 const message = require('./message'); // build message
-const Pieces = require('./peices');
+const Pieces = require('./pieces');
 const Queue = require('./queue');
 
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
