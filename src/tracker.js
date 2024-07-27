@@ -66,8 +66,9 @@ function buildConnReq() {
   const buf = Buffer.allocUnsafe(16);
 
   // connection id 
-  buf.writeUInt32BE(0x417, 0);
-  buf.writeUInt32BE(0x27101980, 4);
+  // buf.writeUInt32BE(0x417, 0);
+  // buf.writeUInt32BE(0x27101980, 4);
+  buf.writeBigUInt64BE(BigInt('0x41727101980'), 0);
 
   // action 
   buf.writeUInt32BE(0, 8);
