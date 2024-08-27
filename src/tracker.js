@@ -16,7 +16,7 @@ const getPeers = (torrent, callback) => {
   // 2. receive and parse connect response
   // 3. send announce request
   // 4. receive and parse announce response
-
+  console.log(`\x1b[33mConnect Request to Tracker Send\x1b[0m`)
   udpSend(socket, buildConnReq(), url); // step-1 send
 
   /*
@@ -26,14 +26,17 @@ const getPeers = (torrent, callback) => {
   */
   socket.on('message', response => { // step-2/4 receive 
     if (respType(response) === 'connect') {
-      
+      console.log(`\x1b[32mConnect Response Received\x1b[0m`)
+
       const connResp = parseConnResp(response); // step-2 parse
-      
       const announceReq = buildAnnounceReq(connResp.connectionId, torrent); // parse announce request
+
+      console.log(`\x1b[33mConnect Request to Tracker Send\x1b[0m`)
       udpSend(socket, announceReq, url); // step-3 send
 
     } else if (respType(response) === 'announce') {
-      
+      console.log(`\x1b[32mAnnounce Response Received\x1b[0m\n`)
+
       const announceResp = parseAnnounceResp(response); // step-4 parse
       // 5. pass peers to callback
       callback(announceResp.peers);
@@ -41,7 +44,7 @@ const getPeers = (torrent, callback) => {
   });
 };
 
-function udpSend(socket, message, rawUrl, callback=()=>{console.log("Connect Request to Tracker Send")}) {
+function udpSend(socket, message, rawUrl, callback=()=>{}) {
   const url = new URL(rawUrl);
   // arguments(message buffer,offset,message length,tracker's port,tracker's hostname,callback function)
   socket.send(message, 0, message.length, url.port, url.hostname, callback);

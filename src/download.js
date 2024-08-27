@@ -7,6 +7,11 @@ const tracker = require('./tracker'); // all function related to tracker like co
 const message = require('./message'); // build message
 const Pieces = require('./pieces');
 const Queue = require('./queue');
+let chalk;
+(async () => {
+    chalk = (await import('chalk')).default;
+})();
+
 
 // tcp interface is very similar to using udp, but you have to call the connect method to create a connection before sending any messages
 
@@ -19,16 +24,20 @@ const main= (torrent,path) =>{
 }
 
 function handlePeer(peer, torrent, pieces, file){
-    const socket = net.Socket();
-    socket.on('error',console.log);
-    socket.connect(peer.port,peer.ip,()=>{
+    const socket = new net.Socket();
+    socket.on('error', err => {
+        console.error(chalk.red(`Error with peer ${peer.ip}:${peer.port} - ${err.message}`));
+        socket.end();
+    });
+    socket.connect(peer.port, peer.ip, () => {
+        console.log(chalk.green(`Connected to peer ${peer.ip}:${peer.port}`));
         socket.write(message.buildHandshake(torrent));
     });
     const queue = new Queue(torrent);
-    onWholeMsg(socket, msg => msgHandler(msg, socket, pieces, queue, torrent, file));
+    onWholeMsg(socket,peer.ip, msg => msgHandler(msg, socket, pieces, queue, torrent, file));
 };
 
-function onWholeMsg(socket, callback) {
+function onWholeMsg(socket, peer_ip,callback) {
     let savedBuf = Buffer.alloc(0);
     let handshake = true;
     
@@ -43,6 +52,10 @@ function onWholeMsg(socket, callback) {
         handshake = false;
       }
     });
+
+    socket.on('end', () => {
+        console.log(chalk.yellow(`Disconnected from peer: ${peer_ip}`));
+    });
 };
 
 function msgHandler(msg, socket, pieces, queue, torrent, file) {
@@ -51,11 +64,14 @@ function msgHandler(msg, socket, pieces, queue, torrent, file) {
     } else {
       const m = message.parse(msg);
   
-      if (m.id === 0) chokeHandler(socket);
-      if (m.id === 1) unchokeHandler(socket,pieces,queue);
-      if (m.id === 4) haveHandler(socket, pieces, queue, m.payload);
-      if (m.id === 5) bitfieldHandler(socket, pieces, queue, m.payload);
-      if (m.id === 7) pieceHandler(socket, pieces, queue, torrent, file, m.payload);
+      switch (m.id) {
+          case 0: chokeHandler(socket); break;
+          case 1: unchokeHandler(socket, pieces, queue); break;
+          case 4: haveHandler(socket, pieces, queue, m.payload); break;
+          case 5: bitfieldHandler(socket, pieces, queue, m.payload); break;
+          case 7: pieceHandler(socket, pieces, queue, torrent, file, m.payload); break;
+          default: console.log(chalk.red(`Unhandled message type: ${m.id}`));
+      }
     }
   }
 
@@ -65,10 +81,12 @@ function isHandshake(msg) {
 };  
 
 function chokeHandler(socket) {
+    // console.log(chalk.red(`Peer choked`));
     socket.end();
 }
 
 function unchokeHandler(socket, pieces, queue) {
+    // console.log(chalk.green(`Peer Unchoked`));
     queue.choked = false;
     requestPiece(socket, pieces, queue);
 }
@@ -97,12 +115,16 @@ function pieceHandler(socket, pieces, queue, torrent, file, pieceResp) {
     pieces.addReceived(pieceResp);
   
     const offset = pieceResp.index * torrent.info['piece length'] + pieceResp.begin;
-    fs.write(file, pieceResp.block, 0, pieceResp.block.length, offset, () => {});
+    fs.write(file, pieceResp.block, 0, pieceResp.block.length, offset, (err) => {
+        if (err) console.error(`Error writing to file `, err);
+    });
   
     if (pieces.isDone()) {
-      console.log('DONE!');
+      console.log(chalk.green(`Download Complete`));
       socket.end();
-      try { fs.closeSync(file); } catch(e) {}
+      try { fs.closeSync(file); } catch(e) {
+        console.error(`Error closing file `, err);
+      }
     } else {
       requestPiece(socket,pieces, queue);
     }
