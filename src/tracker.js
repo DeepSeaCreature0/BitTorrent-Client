@@ -31,7 +31,7 @@ const getPeers = (torrent, callback) => {
       const connResp = parseConnResp(response); // step-2 parse
       const announceReq = buildAnnounceReq(connResp.connectionId, torrent); // parse announce request
 
-      console.log(`\x1b[33mConnect Request to Tracker Send\x1b[0m`)
+      console.log(`\x1b[33mAnnounce Request to Tracker Send\x1b[0m`)
       udpSend(socket, announceReq, url); // step-3 send
 
     } else if (respType(response) === 'announce') {
