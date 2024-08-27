@@ -11,11 +11,15 @@ module.exports = class {
 
   queue(pieceIndex) {
     const nBlocks = tp.blocksPerPiece(this._torrent, pieceIndex);
+
+    const ln_s = tp.blockLen(this._torrent, pieceIndex, 0); // length of all blocks except last block
+    const ln_e = tp.blockLen(this._torrent, pieceIndex, nBlocks-1); //last block length
+
     for (let i = 0; i < nBlocks; i++) {
       const pieceBlock = {
         index: pieceIndex,
         begin: i * tp.BLOCK_LEN,
-        length: tp.blockLen(this._torrent, pieceIndex, i)
+        length: (i==nBlocks-1)?ln_e:ln_s
       };
       this._queue.push(pieceBlock);
     }

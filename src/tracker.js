@@ -41,7 +41,7 @@ const getPeers = (torrent, callback) => {
   });
 };
 
-function udpSend(socket, message, rawUrl, callback=()=>{}) {
+function udpSend(socket, message, rawUrl, callback=()=>{console.log("Connect Request to Tracker Send")}) {
   const url = new URL(rawUrl);
   // arguments(message buffer,offset,message length,tracker's port,tracker's hostname,callback function)
   socket.send(message, 0, message.length, url.port, url.hostname, callback);

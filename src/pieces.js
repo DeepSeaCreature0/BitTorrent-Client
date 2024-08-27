@@ -5,7 +5,7 @@ const tp = require('./torrent-parser');
 module.exports = class {
   constructor(torrent) {
     function buildPiecesArray() {
-      const nPieces = Math.ceil(torrent.info.pieces.length / 20);
+      const nPieces = Math.ceil(torrent.info.pieces.length / 20); //each piece is identified by a 20-byte SHA-1 hash
       const arr = new Array(nPieces).fill(null);
       return arr.map((_, i) => new Array(tp.blocksPerPiece(torrent, i)).fill(false));
     }
@@ -25,8 +25,8 @@ module.exports = class {
   }
 
   needed(pieceBlock) {
-    if (this._requested.every(blocks => blocks.every(i => i))) {
-      this._requested = this._received.map(blocks => blocks.slice());
+    if (this._requested.every(blocks => blocks.every(i => i))) { // check if every block has been requested
+      this._requested = this._received.map(blocks => blocks.slice()); //update to received array so that blocks not received can be requested again
     }
     const blockIndex = pieceBlock.begin / tp.BLOCK_LEN;
     return !this._requested[pieceBlock.index][blockIndex];

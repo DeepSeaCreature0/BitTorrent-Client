@@ -15,7 +15,7 @@ let torrent;
 try {
     torrent = torrentParser.open(torrentFileName);
 } catch (error) {
-    console.error('Error opening torrent file:', error);
+    console.error('Error opening torrent file:\n', error);
     process.exit(1);
 }
 
